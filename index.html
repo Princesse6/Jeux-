@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Royaume en Guerre</title>
+<style>
+:root{--bg:#f4efe4;--card:#fffaf0;--ink:#2b2418;--mut:#7a6f5c;--acc:#b8402a;--ok:#2f7d3a;--line:#d9ceb6;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1812;--card:#2a241a;--ink:#f1e8d4;--mut:#a89c82;--acc:#e0654d;--ok:#6fc07a;--line:#443b2b}}
+:root[data-theme="dark"]{--bg:#1c1812;--card:#2a241a;--ink:#f1e8d4;--mut:#a89c82;--acc:#e0654d;--ok:#6fc07a;--line:#443b2b}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,'Times New Roman',serif}
+body{max-width:520px;margin:0 auto;padding:0 12px 80px}
+header{position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);padding:10px 0;z-index:5;border-bottom:1px solid var(--line)}
+.res{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center;font-size:14px}
+.res div{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 2px}
+.res small{display:block;color:var(--mut);font-size:11px}
+h2{font-size:18px;margin:16px 0 8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.card p{margin:2px 0 0;color:var(--mut);font-size:13px}
+button{font:inherit;background:var(--acc);color:#fff;border:0;border-radius:8px;padding:10px 12px;min-width:84px}
+button:disabled{opacity:.4}
+nav{position:fixed;bottom:0;left:0;right:0;max-width:520px;margin:0 auto;display:flex;background:var(--card);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{flex:1;font-size:12px;background:none;color:var(--mut);border-radius:0;padding:14px 4px}
+nav button.on{color:var(--acc);font-weight:bold}
+#log{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;font-size:14px;line-height:1.4;min-height:48px}
+</style>
+</head>
+<body>
+<header><div class="res" id="res"></div></header>
+<main id="main"></main>
+<nav id="nav"></nav>
+<script>
+var R={f:150,b:150,p:100,o:30},T={l:0,a:0,c:0},tab=0,lvl=1,msg='Bienvenue, seigneur. Bâtissez, recrutez, conquérez.';
+var B=[{k:'f',n:'Ferme',i:'🌾',l:1,r:2},{k:'b',n:'Scierie',i:'🪵',l:1,r:2},{k:'p',n:'Carrière',i:'🪨',l:1,r:1.5},{k:'o',n:'Mine d’or',i:'🪙',l:1,r:0.5}];
+var U={l:{n:'Lanciers',i:'🛡️',atk:6,c:{f:30,b:15},beat:'c',lose:'a'},a:{n:'Archers',i:'🏹',atk:8,c:{f:20,b:30},beat:'l',lose:'c'},c:{n:'Cavaliers',i:'🐎',atk:12,c:{f:50,o:10},beat:'a',lose:'l'}};
+var nm={f:'🌾',b:'🪵',p:'🪨',o:'🪙'};
+var H=[{n:'Rê',i:'☀️',d:'Attaque de l’armée +10 % par niveau',k:'atk'},{n:'Anubis',i:'🐺',d:'Pertes au combat −10 % par niveau',k:'def'},{n:'Isis',i:'🪽',d:'Production +15 % par niveau',k:'prod'},{n:'Horus',i:'🦅',d:'Archers +15 % par niveau',k:'a'},{n:'Seth',i:'🐍',d:'Cavaliers +15 % par niveau',k:'c'}],HS=H.map(function(){return{lv:0}}),act=-1;
+function hb(k){return act>=0&&H[act].k==k?HS[act].lv:0}
+var TL=0,D={l:0,a:0,c:0},W={l:0,a:0,c:0};
+var sel=0,out=false,CT=[{n:'Bubastis',lv:1},{n:'Memphis',lv:3},{n:'Thèbes',lv:6},{n:'Karnak',lv:10},{n:'Abydos',lv:15}];
+function go(i){if(out){out=false;tab=0}else if(i==4){out=true;tab=4}else tab=i;render()}
+function cap(){return TL*15}
+function wcap(){return TL*20}
+function soul(k,n){var w=Math.round(n*.6),d=n-w,rw=wcap()-W.l-W.a-W.c,rd=cap()-D.l-D.a-D.c;W[k]+=Math.max(0,Math.min(w,rw));D[k]+=Math.max(0,Math.min(d,rd))}
+function heal(k){var c={f:5};if(W[k]>0&&can(c)){pay(c);W[k]--;T[k]++;msg='🩹 '+U[k].n+' soigné !'}render()}
+function tcost(){var v=Math.round(80*Math.pow(1.7,TL));return{b:v,p:v}}
+function temple(){var c=tcost();if(can(c)){pay(c);TL++;msg='🏛️ Temple niveau '+TL+' : il garde jusqu’à '+cap()+' âmes.'}render()}
+function revive(k){var c={o:3};if(D[k]>0&&can(c)){pay(c);D[k]--;T[k]++;msg='✨ '+U[k].n+' ressuscité !'}render()}
+function tsec(){return '<h2>Blessés</h2>'+Object.keys(U).map(function(k){return '<div class="card"><div>🩹 '+U[k].i+' '+U[k].n+' blessés : '+W[k]+'<p>🌾5 par blessé</p></div><button '+(W[k]>0&&R.f>=5?'':'disabled')+' onclick="heal(\''+k+'\')">Soigner</button></div>'}).join('')+'<h2>Âmes</h2>'+Object.keys(U).map(function(k){return '<div class="card"><div>'+U[k].i+' '+U[k].n+' en attente : '+D[k]+'<p>🪙3 par âme</p></div><button '+(D[k]>0&&R.o>=3?'':'disabled')+' onclick="revive(\''+k+'\')">Ressusciter</button></div>'}).join('')}
+function prodm(){return 1+0.15*hb('prod')}
+function hcost(i){return Math.round(40*Math.pow(1.8,HS[i].lv))}
+function hero(i){var c={o:hcost(i)};if(can(c)){pay(c);HS[i].lv++;if(HS[i].lv==1)act=i;msg=H[i].i+' '+H[i].n+' niveau '+HS[i].lv+' !'}render()}
+function cost(b){var v=Math.round(40*Math.pow(1.7,b.l));return{b:v,p:v}}
+function can(c){for(var k in c)if(R[k]<c[k])return false;return true}
+function pay(c){for(var k in c)R[k]-=c[k]}
+function fmt(c){var s='';for(var k in c)s+=nm[k]+c[k]+' ';return s}
+function up(i){var b=B[i],c=cost(b);if(can(c)){pay(c);b.l++;msg=b.n+' niveau '+b.l+' !'}render()}
+function train(k){var u=U[k];if(can(u.c)){pay(u.c);T[k]++;msg='+1 '+u.n}render()}
+function enemy(n){return{l:3+n*3,a:2+n*3,c:1+n*2}}
+function power(x,y,h){var tot=y.l+y.a+y.c||1,p=0;for(var k in U){var u=U[k];p+=x[k]*u.atk*(1+0.5*y[u.beat]/tot-0.25*y[u.lose]/tot)*(h?(1+0.1*hb('atk'))*(1+0.15*hb(k)):1)}return p}
+function attack(ci){
+ var me=T,en=enemy(CT[ci].lv),pm=power(me,en,1),pe=power(en,me);
+ if(pm<=0){msg='Vous n’avez aucune troupe !';return render()}
+ if(pm>=pe){var f=Math.min(.9,pe/pm);for(var k in T){var n=Math.floor(T[k]*(1-f*.8*(1-Math.min(.8,.1*hb('def')))));soul(k,T[k]-n);T[k]=n};
+  var g=CT[ci].lv*60;R.f+=g;R.b+=g;R.p+=g;R.o+=Math.round(g/3);CT[ci].lv++;
+  msg='⚔️ Victoire ! Butin : '+g+' de chaque ressource. Pillage de '+CT[ci].n+' réussi ! La ville se renforce (niveau '+CT[ci].lv+').'}
+ else{for(var k in T)soul(k,T[k]);T={l:0,a:0,c:0};msg='💀 Défaite ! Votre armée est anéantie. Recrutez et retentez (astuce : lanciers > cavaliers > archers > lanciers).'}
+ render()}
+function render(){
+ document.getElementById('res').innerHTML=['f','b','p','o'].map(function(k){return '<div>'+nm[k]+' '+Math.floor(R[k])+'<small>+'+rate(k)+'/s</small></div>'}).join('');
+ var h='';
+ if(tab==0){h='<h2>Votre ville</h2>'+B.map(function(b,i){var c=cost(b);return '<div class="card"><div>'+b.i+' <b>'+b.n+'</b> niv. '+b.l+'<p>Améliorer : '+fmt(c)+'</p></div><button '+(can(c)?'':'disabled')+' onclick="up('+i+')">Bâtir</button></div>'}).join('')}
+ if(tab==3){var tc=tcost();h='<h2>Temple</h2><div class="card"><div>🏛️ <b>Temple</b> niv. '+TL+'<p>Garde '+cap()+' âmes et '+wcap()+' blessés ('+(D.l+D.a+D.c)+' âmes, '+(W.l+W.a+W.c)+' blessés)<br>'+(TL?'Améliorer':'Construire')+' : '+fmt(tc)+'</p></div><button '+(can(tc)?'':'disabled')+' onclick="temple()">'+(TL?'Bâtir':'Construire')+'</button></div>'+(TL?tsec():'<p style="color:var(--mut);font-size:13px">Construisez le temple pour soigner les blessés et ressusciter les morts.</p>')}
+ if(tab==1){h='<h2>Caserne</h2>'+Object.keys(U).map(function(k){var u=U[k];return '<div class="card"><div>'+u.i+' <b>'+u.n+'</b> : '+T[k]+'<p>Attaque '+u.atk+' · '+fmt(u.c)+'</p></div><button '+(can(u.c)?'':'disabled')+' onclick="train(\''+k+'\')">Recruter</button></div>'}).join('')+'<p style="color:var(--mut);font-size:13px">🛡️ bat 🐎 · 🐎 bat 🏹 · 🏹 bat 🛡️</p>'}
+ if(tab==4){var P=[[70,60],[255,85],[55,200],[265,215],[160,30]],tot=T.l+T.a+T.c;h='<h2>Hors de la ville</h2><svg viewBox="0 0 320 300" style="width:100%;background:var(--card);border:1px solid var(--line);border-radius:10px"><path d="M0 125 Q80 95 160 130 T320 110" stroke="#4a90c2" stroke-width="14" fill="none" opacity=".45"/>'+CT.map(function(c,i){var e=enemy(c.lv),w=tot>0&&power(T,e,1)>=power(e,T);return '<line x1="160" y1="160" x2="'+P[i][0]+'" y2="'+P[i][1]+'" stroke="#a89c82" stroke-dasharray="4 4"/><g onclick="sel='+i+';render()"><circle cx="'+P[i][0]+'" cy="'+P[i][1]+'" r="'+(i==sel?24:19)+'" fill="'+(w?'#2f7d3a':'#b8402a')+'" stroke="#f1e8d4" stroke-width="'+(i==sel?4:1)+'"/><text x="'+P[i][0]+'" y="'+(P[i][1]+6)+'" text-anchor="middle" font-size="18">🏘️</text><text x="'+P[i][0]+'" y="'+(P[i][1]+40)+'" text-anchor="middle" font-size="12" fill="#a89c82">'+c.n+' (niv. '+c.lv+')</text></g>'}).join('')+'<circle cx="160" cy="160" r="26" fill="#b8402a" stroke="#f1e8d4" stroke-width="3"/><text x="160" y="169" text-anchor="middle" font-size="22">🏰</text><text x="160" y="200" text-anchor="middle" font-size="12" fill="#a89c82">Ma ville</text></svg>';var s=CT[sel],e=enemy(s.lv),w=tot>0&&power(T,e,1)>=power(e,T);h+='<div class="card" style="margin-top:10px"><div>🏘️ <b>'+s.n+'</b> niv. '+s.lv+'<p>🛡️ '+e.l+' · 🏹 '+e.a+' · 🐎 '+e.c+'<br>'+(w?'✅ Victoire probable':'⚠️ Trop dangereux pour l’instant')+'</p></div><button onclick="attack('+sel+')">Attaquer</button></div><p style="color:var(--mut);font-size:13px">Votre armée : 🛡️ '+T.l+' · 🏹 '+T.a+' · 🐎 '+T.c+'<br>Touchez une ville pour la sélectionner. Vert = victoire probable, rouge = trop forte.</p>'}
+ if(tab==2){h='<h2>Panthéon égyptien</h2>'+H.map(function(x,i){var s=HS[i],c={o:hcost(i)};return '<div class="card"><div>'+x.i+' <b>'+x.n+'</b> niv. '+s.lv+(act==i?' ✓ actif':'')+'<p>'+x.d+'<br>'+(s.lv?'Améliorer':'Invoquer')+' : '+fmt(c)+'</p></div><div style="display:flex;flex-direction:column;gap:6px"><button '+(can(c)?'':'disabled')+' onclick="hero('+i+')">'+(s.lv?'Niveau +':'Invoquer')+'</button>'+(s.lv&&act!=i?'<button onclick="act='+i+';render()">Choisir</button>':'')+'</div></div>'}).join('')+'<p style="color:var(--mut);font-size:13px">Un seul dieu protège votre armée à la fois. L’or vient de la mine.</p>'}
+ document.getElementById('main').innerHTML=h+'<h2>Journal</h2><div id="log">'+msg+'</div>';
+ document.getElementById('nav').innerHTML=(out?['🏰 Entrer dans la ville']:['🏰 Bâtiments','🪖 Armée','🏺 Héros','🏛️ Temple','🚪 Sortir']).map(function(t,i){return '<button class="'+(!out&&i==tab?'on':'')+'" onclick="go('+i+')">'+t+'</button>'}).join('')}
+function rate(k){for(var i=0;i<4;i++)if(B[i].k==k)return (B[i].l*B[i].r*prodm()).toFixed(1)}
+setInterval(function(){B.forEach(function(b){R[b.k]+=b.l*b.r*prodm()});render()},1000);
+render();
+</script>
+</body>
+</html>
